@@ -1,6 +1,7 @@
 
 using UnityEngine;
 using TMPro;
+using System.Collections;
 
 interface IInteractable
 {
@@ -13,6 +14,7 @@ public class Interactor : MonoBehaviour
     public float InteractRange = 0.5f;
     public TMP_Text InteractionPrompt;
     private Animator anim;
+    private bool isPickingUp;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -35,10 +37,10 @@ public class Interactor : MonoBehaviour
                 InteractionPrompt.text = $"Press E to pickup {hitTag}";
             }
 
-            if (Input.GetKeyDown(KeyCode.E))
+            if (Input.GetKeyDown(KeyCode.E) && !isPickingUp)
             {
-                interactObj.Interact(hitTag);
-                anim.SetInteger("Melee_w", 1);
+                anim.SetTrigger("Pickup");
+                StartCoroutine(CompletePickup(interactObj, hitTag));
             }
         }
         else
@@ -53,5 +55,17 @@ public class Interactor : MonoBehaviour
         {
             InteractionPrompt.gameObject.SetActive(visible);
         }
+    }
+
+    private IEnumerator CompletePickup(IInteractable interactObj, string hitTag)
+    {
+        isPickingUp = true;
+        SetPromptVisible(false);
+
+        yield return new WaitForSeconds(0.5f);
+
+        interactObj.Interact(hitTag);
+        anim.SetInteger("Melee_w", 1);
+        isPickingUp = false;
     }
 }
