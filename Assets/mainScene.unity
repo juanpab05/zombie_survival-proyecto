@@ -4783,6 +4783,10 @@ Transform:
 --- !u!1001 &1888977491
 PrefabInstance:
   m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1955290599}
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
