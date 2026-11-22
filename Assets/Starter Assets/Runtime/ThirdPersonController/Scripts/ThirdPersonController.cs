@@ -18,6 +18,9 @@ namespace StarterAssets
         [Tooltip("Move speed of the character in m/s")]
         public float MoveSpeed = 2.0f;
 
+        [Tooltip("Move speed of the character while crouching in m/s")]
+        public float CrouchSpeed = 1.25f;
+
         [Tooltip("Sprint speed of the character in m/s")]
         public float SprintSpeed = 5.335f;
 
@@ -82,6 +85,12 @@ namespace StarterAssets
         // player
         private float _speed;
         private float _animationBlend;
+        private bool _isCrouching;
+
+
+        private bool _isDead;
+        
+        
         private float _targetRotation = 0.0f;
         private float _rotationVelocity;
         private float _verticalVelocity;
@@ -97,6 +106,8 @@ namespace StarterAssets
         private int _animIDJump;
         private int _animIDFreeFall;
         private int _animIDMotionSpeed;
+        private int _animIDCrouching;
+
 
 #if ENABLE_INPUT_SYSTEM
         private PlayerInput _playerInput;
@@ -122,6 +133,7 @@ namespace StarterAssets
             }
         }
 
+        
 
         private void Awake()
         {
@@ -156,13 +168,58 @@ namespace StarterAssets
         {
             _hasAnimator = TryGetComponent(out _animator);
 
+            if (_isDead)
+            {
+                _input.MoveInput(Vector2.zero);
+                _input.LookInput(Vector2.zero);
+                _input.JumpInput(false);
+                _input.SprintInput(false);
+
+#if ENABLE_INPUT_SYSTEM
+                _playerInput.DeactivateInput();
+#endif
+                return;
+            }
+
             JumpAndGravity();
             GroundedCheck();
             Move();
+            Crouch();
+        }
+
+        public void SetDead(bool isDead)
+        {
+            _isDead = isDead;
+
+            if (_isDead)
+            {
+                if (_input != null)
+                {
+                    _input.MoveInput(Vector2.zero);
+                    _input.LookInput(Vector2.zero);
+                    _input.JumpInput(false);
+                    _input.SprintInput(false);
+                    _input.crouch = false;
+                }
+            }
+            else
+            {
+#if ENABLE_INPUT_SYSTEM
+                if (_playerInput != null)
+                {
+                    _playerInput.ActivateInput();
+                }
+#endif
+            }
         }
 
         private void LateUpdate()
         {
+            if (_isDead)
+            {
+                return;
+            }
+
             CameraRotation();
         }
 
@@ -173,6 +230,7 @@ namespace StarterAssets
             _animIDJump = Animator.StringToHash("Jump");
             _animIDFreeFall = Animator.StringToHash("FreeFall");
             _animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
+            _animIDCrouching = Animator.StringToHash("Crouching");
         }
 
         private void GroundedCheck()
@@ -214,7 +272,9 @@ namespace StarterAssets
         private void Move()
         {
             // set target speed based on move speed, sprint speed and if sprint is pressed
-            float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
+            //float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
+
+            float targetSpeed = _isDead ? 0 : (_isCrouching ? CrouchSpeed : (_input.sprint ? SprintSpeed : MoveSpeed));
 
             // a simplistic acceleration and deceleration designed to be easy to remove, replace, or iterate upon
 
@@ -278,6 +338,21 @@ namespace StarterAssets
                 _animator.SetFloat(_animIDMotionSpeed, inputMagnitude);
             }
         }
+
+        private void Crouch()
+        {
+            if (Keyboard.current.leftCtrlKey.wasPressedThisFrame)
+                {
+                    _isCrouching = !_isCrouching;
+                }
+
+            if (_hasAnimator)
+            {
+                _animator.SetBool(_animIDCrouching, _isCrouching);
+            }
+        }
+
+
 
         private void JumpAndGravity()
         {
