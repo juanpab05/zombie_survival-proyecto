@@ -10,11 +10,12 @@ interface IInteractable
 
 public class Interactor : MonoBehaviour
 {
-    public Transform InteractorSource;
-    public float InteractRange = 0.5f;
     public TMP_Text InteractionPrompt;
     private Animator anim;
     private bool isPickingUp;
+    private IInteractable currentInteractable;
+    private string currentInteractableTag;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -25,26 +26,35 @@ public class Interactor : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Ray ray = new Ray(InteractorSource.position, InteractorSource.forward);
-
-        if (Physics.Raycast(ray, out RaycastHit hitInfo, InteractRange) &&
-            hitInfo.collider.gameObject.TryGetComponent(out IInteractable interactObj))
+        if (Input.GetKeyDown(KeyCode.E) && currentInteractable != null && !isPickingUp)
         {
-            string hitTag = hitInfo.collider.gameObject.tag;
+            anim.SetTrigger("Pickup");
+            StartCoroutine(CompletePickup(currentInteractable, currentInteractableTag));
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.TryGetComponent(out IInteractable interactable))
+        {
+            currentInteractable = interactable;
+            currentInteractableTag = other.tag;
+
             SetPromptVisible(true);
             if (InteractionPrompt != null)
             {
-                InteractionPrompt.text = $"Press E to pickup {hitTag}";
-            }
-
-            if (Input.GetKeyDown(KeyCode.E) && !isPickingUp)
-            {
-                anim.SetTrigger("Pickup");
-                StartCoroutine(CompletePickup(interactObj, hitTag));
+                InteractionPrompt.text = $"Press E to pickup {currentInteractableTag}";
             }
         }
-        else
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.TryGetComponent(out IInteractable interactable) &&
+            interactable.Equals(currentInteractable))
         {
+            currentInteractable = null;
+            currentInteractableTag = null;
             SetPromptVisible(false);
         }
     }
