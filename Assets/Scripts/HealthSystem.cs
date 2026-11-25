@@ -72,6 +72,13 @@ public class HealthSystem : MonoBehaviour
             Die();
         }
     }
+    
+    public void Heal(float amount)
+    {
+        if (IsDead) return;
+        health = Mathf.Clamp(health + amount, 0f, 100f);
+        updateHealthBar(health);
+    }
 
     public void updateHealthBar(float h)
     {
