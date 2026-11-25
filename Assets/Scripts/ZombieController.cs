@@ -13,9 +13,11 @@ public class ZombieController : MonoBehaviour
 
     private Animator anim;
     private BoxCollider attackHitbox;
+    private CapsuleCollider zombieHitbox;
     private bool isDead;
     private bool attackInProgress;
-    private Coroutine disableHitboxRoutine;
+    private Coroutine disableAttackHitboxRoutine;
+    private Coroutine disableZombieHitboxRoutine;
     private bool hasHitPlayer;
 
     [SerializeField] private float attackHitboxDuration = 0.4f;
@@ -26,6 +28,7 @@ public class ZombieController : MonoBehaviour
     void Start()
     {
         anim = GetComponent<Animator>();
+        zombieHitbox = GetComponent<CapsuleCollider>();
 
         if (PlayerManager.instance == null)
         {
@@ -142,21 +145,26 @@ public class ZombieController : MonoBehaviour
             return;
         }
 
-        if (anim != null)
+        /*if (anim != null)
         {
             anim.SetFloat("Speed", 0.0f);
-        }
+        }*/
 
         if (navZombie != null && navZombie.isActiveAndEnabled)
         {
             navZombie.isStopped = true;
             navZombie.ResetPath();
-
+            navZombie.speed = 0f;
         }
 
         if (attackHitbox != null)
         {
             DeactivateAttackHitbox();
+        }
+
+        if (zombieHitbox != null)
+        {
+            disableZombieHitboxRoutine = StartCoroutine(DisableZombieHitboxAfterDelay());
         }
     }
 
@@ -193,12 +201,12 @@ public class ZombieController : MonoBehaviour
         hasHitPlayer = false;
         attackHitbox.enabled = true;
 
-        if (disableHitboxRoutine != null)
+        if (disableAttackHitboxRoutine != null)
         {
-            StopCoroutine(disableHitboxRoutine);
+            StopCoroutine(disableAttackHitboxRoutine);
         }
 
-        disableHitboxRoutine = StartCoroutine(DisableAttackHitboxAfterDelay());
+        disableAttackHitboxRoutine = StartCoroutine(DisableAttackHitboxAfterDelay());
     }
 
     private IEnumerator DisableAttackHitboxAfterDelay()
@@ -209,10 +217,10 @@ public class ZombieController : MonoBehaviour
 
     private void DeactivateAttackHitbox()
     {
-        if (disableHitboxRoutine != null)
+        if (disableAttackHitboxRoutine != null)
         {
-            StopCoroutine(disableHitboxRoutine);
-            disableHitboxRoutine = null;
+            StopCoroutine(disableAttackHitboxRoutine);
+            disableAttackHitboxRoutine = null;
         }
 
         if (attackHitbox != null)
@@ -220,6 +228,26 @@ public class ZombieController : MonoBehaviour
             attackHitbox.enabled = false;
         }
         hasHitPlayer = false;
+    }
+
+    private IEnumerator DisableZombieHitboxAfterDelay()
+    {
+        yield return new WaitForSeconds(2.0f);
+        DeactivateZombieHitbox();
+    }
+
+    private void DeactivateZombieHitbox()
+    {
+        if (disableZombieHitboxRoutine != null)
+        {
+            StopCoroutine(disableZombieHitboxRoutine);
+            disableZombieHitboxRoutine = null;
+        }
+
+        if (zombieHitbox != null)
+        {
+            zombieHitbox.enabled = false;
+        }
     }
 
     private void OnTriggerEnter(Collider other)
