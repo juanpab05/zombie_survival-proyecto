@@ -22,14 +22,26 @@ public class DealDamage : MonoBehaviour
             return;
         }
 
+        //Extraer zombiecontroller
+        ZombieController zombieController = other.GetComponentInParent<ZombieController>();
+        if (zombieController == null)
+        {
+            Debug.LogError("ZombieController is missing from the hit zombie.", other);
+            return;
+        }
+
         HealthSystem zombie = other.GetComponentInParent<HealthSystem>();
         if (zombie == null || zombie.IsDead)
         {
             return;
         }
 
-        zombie.TakeDamage(damage);
-        Debug.Log($"Melee damage: {damage}");
+        //Preguntar al zombie controller si el zombie esta alertado o no. Si no esta alertado 
+        //el ataque sigiloso realiza 100 de daño y mata al zombi instantaneamente.
+        float damageToDeal = zombieController.IsAlerted ? damage : 100f;
+        zombie.TakeDamage(damageToDeal);
+        Debug.Log($"Melee damage: {damageToDeal}");
+        
         SetMeleeHitboxEnabled(false);
         SendMessageUpwards(
             "EndMeleeAttack",
