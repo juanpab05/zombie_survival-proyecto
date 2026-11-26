@@ -103,7 +103,6 @@ public class HealthSystem : MonoBehaviour
             if (DeathMessage != null)
             {
                 DeathMessage.gameObject.SetActive(true);
-                DeathMessage.text = "You survived 67 rounds";
             }
         }
         if (characterTag == "Zombie")
