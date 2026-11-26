@@ -8,6 +8,9 @@ TagManager:
   - Zombie
   - machete
   - meleeHitbox
+  - Venda
+  - Botiquin
+  - Pastillas
   layers:
   - Default
   - TransparentFX
