@@ -1,22 +1,35 @@
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
+using StarterAssets;
 
 public class ZombieController : MonoBehaviour
 {   
-    public float lookRadius = 20f;
+    public float lookRadius = 10f;
+
+    public float alertRadiusUncrouched = 2f;
 
     public float attackRange = 1.0f;
 
+    [SerializeField] private float visionAngle = 150f;
+
     Transform target;
+    private ThirdPersonController playerController;
     NavMeshAgent navZombie;
+
+    private bool isAlerted = false;
 
     private Animator anim;
     private BoxCollider attackHitbox;
+    private CapsuleCollider zombieHitbox;
+    private Rigidbody zombieRigidbody;
     private bool isDead;
     private bool attackInProgress;
-    private Coroutine disableHitboxRoutine;
+    private Coroutine disableAttackHitboxRoutine;
+    private Coroutine disableZombieHitboxRoutine;
     private bool hasHitPlayer;
+
+    public bool IsAlerted => isAlerted;
 
     [SerializeField] private float attackHitboxDuration = 0.4f;
     [SerializeField] private float damage = 20f;
@@ -26,6 +39,8 @@ public class ZombieController : MonoBehaviour
     void Start()
     {
         anim = GetComponent<Animator>();
+        zombieHitbox = GetComponent<CapsuleCollider>();
+        zombieRigidbody = GetComponent<Rigidbody>();
 
         if (PlayerManager.instance == null)
         {
@@ -42,6 +57,12 @@ public class ZombieController : MonoBehaviour
         }
 
         target = PlayerManager.instance.Player.transform;
+        playerController = target.GetComponentInChildren<ThirdPersonController>();
+        if (playerController == null)
+        {
+            Debug.LogError("ThirdPersonController is missing from the player.", this);
+        }
+
         navZombie= GetComponent<NavMeshAgent>();
         attackHitbox = GetComponent<BoxCollider>();
         /*foreach (Transform child in GetComponentsInChildren<Transform>(true))
@@ -89,7 +110,7 @@ public class ZombieController : MonoBehaviour
 
         if (target == null)
         {
-            anim.SetFloat("Speed", 0.0f);
+            //anim.SetFloat("Speed", 0.0f);
             return;
         }
 
@@ -100,8 +121,14 @@ public class ZombieController : MonoBehaviour
         }
 
         float distance = Vector3.Distance(target.position, transform.position);
-        if (distance <= lookRadius)
+        bool isUncrouchedPlayerNearby = playerController != null &&
+            !playerController.IsCrouching &&
+            distance <= alertRadiusUncrouched;
+
+        if ((distance <= lookRadius && (IsPlayerInVision() || isAlerted)) ||
+            isUncrouchedPlayerNearby)
         {
+            isAlerted = true;
             if (distance <= attackRange && !attackInProgress)
             {
                 navZombie.isStopped = true;
@@ -127,10 +154,28 @@ public class ZombieController : MonoBehaviour
         {
             navZombie.isStopped = true;
             navZombie.ResetPath();
+            isAlerted = false;
         }
 
         DetectPlayerHit();
         anim.SetFloat("Speed", navZombie.velocity.magnitude);
+    }
+
+    private bool IsPlayerInVision()
+    {
+        Vector3 directionToPlayer = target.position - transform.position;
+        directionToPlayer.y = 0f;
+
+        Vector3 forward = transform.forward;
+        forward.y = 0f;
+
+        if (directionToPlayer.sqrMagnitude <= 0.001f)
+        {
+            return true;
+        }
+
+        return forward.sqrMagnitude > 0.001f &&
+            Vector3.Angle(forward, directionToPlayer) <= visionAngle * 0.5f;
     }
 
     public void SetDead(bool dead)
@@ -142,21 +187,38 @@ public class ZombieController : MonoBehaviour
             return;
         }
 
-        if (anim != null)
+        /*if (anim != null)
         {
             anim.SetFloat("Speed", 0.0f);
-        }
+        }*/
 
         if (navZombie != null && navZombie.isActiveAndEnabled)
         {
-            navZombie.isStopped = true;
-            navZombie.ResetPath();
+            if (navZombie.isOnNavMesh)
+            {
+                navZombie.isStopped = true;
+                navZombie.ResetPath();
+                navZombie.velocity = Vector3.zero;
+            }
 
+            navZombie.speed = 0f;
+        }
+
+        if (zombieRigidbody != null)
+        {
+            zombieRigidbody.linearVelocity = Vector3.zero;
+            zombieRigidbody.angularVelocity = Vector3.zero;
+            zombieRigidbody.isKinematic = true;
         }
 
         if (attackHitbox != null)
         {
             DeactivateAttackHitbox();
+        }
+
+        if (zombieHitbox != null)
+        {
+            disableZombieHitboxRoutine = StartCoroutine(DisableZombieHitboxAfterDelay());
         }
     }
 
@@ -193,12 +255,12 @@ public class ZombieController : MonoBehaviour
         hasHitPlayer = false;
         attackHitbox.enabled = true;
 
-        if (disableHitboxRoutine != null)
+        if (disableAttackHitboxRoutine != null)
         {
-            StopCoroutine(disableHitboxRoutine);
+            StopCoroutine(disableAttackHitboxRoutine);
         }
 
-        disableHitboxRoutine = StartCoroutine(DisableAttackHitboxAfterDelay());
+        disableAttackHitboxRoutine = StartCoroutine(DisableAttackHitboxAfterDelay());
     }
 
     private IEnumerator DisableAttackHitboxAfterDelay()
@@ -209,10 +271,10 @@ public class ZombieController : MonoBehaviour
 
     private void DeactivateAttackHitbox()
     {
-        if (disableHitboxRoutine != null)
+        if (disableAttackHitboxRoutine != null)
         {
-            StopCoroutine(disableHitboxRoutine);
-            disableHitboxRoutine = null;
+            StopCoroutine(disableAttackHitboxRoutine);
+            disableAttackHitboxRoutine = null;
         }
 
         if (attackHitbox != null)
@@ -220,6 +282,26 @@ public class ZombieController : MonoBehaviour
             attackHitbox.enabled = false;
         }
         hasHitPlayer = false;
+    }
+
+    private IEnumerator DisableZombieHitboxAfterDelay()
+    {
+        yield return new WaitForSeconds(2.0f);
+        DeactivateZombieHitbox();
+    }
+
+    private void DeactivateZombieHitbox()
+    {
+        if (disableZombieHitboxRoutine != null)
+        {
+            StopCoroutine(disableZombieHitboxRoutine);
+            disableZombieHitboxRoutine = null;
+        }
+
+        if (zombieHitbox != null)
+        {
+            zombieHitbox.enabled = false;
+        }
     }
 
     private void OnTriggerEnter(Collider other)

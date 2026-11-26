@@ -90,6 +90,7 @@ namespace StarterAssets
 
         private bool _isDead;
         
+        public bool IsCrouching => _isCrouching;
         
         private float _targetRotation = 0.0f;
         private float _rotationVelocity;
@@ -181,10 +182,10 @@ namespace StarterAssets
                 return;
             }
 
+            Crouch();
             JumpAndGravity();
             GroundedCheck();
             Move();
-            Crouch();
         }
 
         public void SetDead(bool isDead)
@@ -356,6 +357,11 @@ namespace StarterAssets
 
         private void JumpAndGravity()
         {
+            if (_isCrouching)
+            {
+                _input.JumpInput(false);
+            }
+
             if (Grounded)
             {
                 // reset the fall timeout timer
@@ -375,7 +381,7 @@ namespace StarterAssets
                 }
 
                 // Jump
-                if (_input.jump && _jumpTimeoutDelta <= 0.0f)
+                if (_input.jump && !_isCrouching && _jumpTimeoutDelta <= 0.0f)
                 {
                     // the square root of H * -2 * G = how much velocity needed to reach desired height
                     _verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);

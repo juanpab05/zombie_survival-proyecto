@@ -18,7 +18,6 @@ public class HealthSystem : MonoBehaviour
 
     private Animator anim;
 
-    private CapsuleCollider capsHitbox;
 
     private bool deathTriggered;
 
@@ -32,7 +31,6 @@ public class HealthSystem : MonoBehaviour
     void Start()
     {
         anim = GetComponent<Animator>();
-        capsHitbox = GetComponent<CapsuleCollider>();
         characterTag = gameObject.tag;
 
 
@@ -113,12 +111,6 @@ public class HealthSystem : MonoBehaviour
             SendMessage("SetDead", true, SendMessageOptions.DontRequireReceiver);
         }
         PlayDeathSound(deathSound);
-        //Si la capsula no se desactiva, queda una pared invisible donde se murio el zombie,
-        //pero si se desactiva, el zombie se pone a deslizarse en el piso.
-        /*if (capsHitbox != null)
-        {
-            capsHitbox.enable = false;
-        }*/
     }
 
     private void PlayDeathSound(AudioClip clip)
