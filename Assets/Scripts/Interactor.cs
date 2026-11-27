@@ -6,6 +6,9 @@ using System.Collections;
 interface IInteractable
 {
     public void Interact(string tag);
+    public string getInteractText();
+
+    public string getAnimationTrigger();
 }
 
 public class Interactor : MonoBehaviour
@@ -15,6 +18,8 @@ public class Interactor : MonoBehaviour
     private bool isPickingUp;
     private IInteractable currentInteractable;
     private string currentInteractableTag;
+
+    private string animTrigger;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -28,29 +33,35 @@ public class Interactor : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.E) && currentInteractable != null && !isPickingUp)
         {
-            anim.SetTrigger("Pickup");
+            anim.SetTrigger(animTrigger);
             StartCoroutine(CompletePickup(currentInteractable, currentInteractableTag));
+            currentInteractable = null;
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.TryGetComponent(out IInteractable interactable))
+        IInteractable interactable = other.GetComponentInParent<IInteractable>();
+        if (interactable != null)
         {
             currentInteractable = interactable;
             currentInteractableTag = other.tag;
 
+            animTrigger = interactable.getAnimationTrigger();
+
             SetPromptVisible(true);
             if (InteractionPrompt != null)
             {
-                InteractionPrompt.text = $"Press E to pickup {currentInteractableTag}";
+                //InteractionPrompt.text = $"Press E to pickup {currentInteractableTag}";
+                InteractionPrompt.text = interactable.getInteractText();
             }
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.TryGetComponent(out IInteractable interactable) &&
+        IInteractable interactable = other.GetComponentInParent<IInteractable>();
+        if (interactable != null &&
             interactable.Equals(currentInteractable))
         {
             currentInteractable = null;

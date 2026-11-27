@@ -4,6 +4,22 @@ public class PickUp : MonoBehaviour, IInteractable
 {
     [Header("Ítem para el inventario (Hotbar)")]
     public ItemData itemData;
+    public string interactMessage;
+    public string itemTag;
+
+    public string animTrigger = "Pickup";
+
+    public string getInteractText()
+    {  
+        itemTag = gameObject.tag;
+        interactMessage = $"Press E to pickup {itemTag}";
+        return interactMessage;
+    }
+
+    public string getAnimationTrigger()
+    {
+        return animTrigger;
+    }
 
     public void Interact(string tag)
     {
