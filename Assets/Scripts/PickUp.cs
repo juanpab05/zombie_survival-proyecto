@@ -7,7 +7,7 @@ public class PickUp : MonoBehaviour, IInteractable
     public string interactMessage;
     public string itemTag;
 
-    public string animTrigger = "Pickup";
+    public string animInteractionTrigger = "Pickup";
 
     public string getInteractText()
     {  
@@ -16,9 +16,9 @@ public class PickUp : MonoBehaviour, IInteractable
         return interactMessage;
     }
 
-    public string getAnimationTrigger()
+    public string getInteractAnimationTrigger()
     {
-        return animTrigger;
+        return animInteractionTrigger;
     }
 
     public void Interact(string tag)

@@ -8,6 +8,11 @@ using UnityEngine.InputSystem;
 
 namespace StarterAssets
 {
+    public interface IPickupState
+    {
+        bool IsPickingUp { get; }
+    }
+
     [RequireComponent(typeof(CharacterController))]
 #if ENABLE_INPUT_SYSTEM
     [RequireComponent(typeof(PlayerInput))]
@@ -116,6 +121,7 @@ namespace StarterAssets
         private Animator _animator;
         private CharacterController _controller;
         private StarterAssetsInputs _input;
+        private IPickupState _pickupState;
         private GameObject _mainCamera;
 
         private const float _threshold = 0.01f;
@@ -152,6 +158,7 @@ namespace StarterAssets
             _hasAnimator = TryGetComponent(out _animator);
             _controller = GetComponent<CharacterController>();
             _input = GetComponent<StarterAssetsInputs>();
+            _pickupState = GetComponent<IPickupState>();
 #if ENABLE_INPUT_SYSTEM
             _playerInput = GetComponent<PlayerInput>();
 #else
@@ -272,25 +279,30 @@ namespace StarterAssets
 
         private void Move()
         {
+            bool isPickingUp = _pickupState != null && _pickupState.IsPickingUp;
+
             // set target speed based on move speed, sprint speed and if sprint is pressed
             //float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
-
-            float targetSpeed = _isDead ? 0 : (_isCrouching ? CrouchSpeed : (_input.sprint ? SprintSpeed : MoveSpeed));
+            float targetSpeed = _isDead || isPickingUp ? 0 : (_isCrouching ? CrouchSpeed : (_input.sprint ? SprintSpeed : MoveSpeed));
 
             // a simplistic acceleration and deceleration designed to be easy to remove, replace, or iterate upon
 
             // note: Vector2's == operator uses approximation so is not floating point error prone, and is cheaper than magnitude
             // if there is no input, set the target speed to 0
-            if (_input.move == Vector2.zero) targetSpeed = 0.0f;
+            if (_input.move == Vector2.zero || isPickingUp) targetSpeed = 0.0f;
 
             // a reference to the players current horizontal velocity
             float currentHorizontalSpeed = new Vector3(_controller.velocity.x, 0.0f, _controller.velocity.z).magnitude;
 
             float speedOffset = 0.1f;
-            float inputMagnitude = _input.analogMovement ? _input.move.magnitude : 1f;
+            float inputMagnitude = isPickingUp ? 0f : (_input.analogMovement ? _input.move.magnitude : 1f);
 
             // accelerate or decelerate to target speed
-            if (currentHorizontalSpeed < targetSpeed - speedOffset ||
+            if (isPickingUp)
+            {
+                _speed = 0.0f;
+            }
+            else if (currentHorizontalSpeed < targetSpeed - speedOffset ||
                 currentHorizontalSpeed > targetSpeed + speedOffset)
             {
                 // creates curved result rather than a linear one giving a more organic speed change
@@ -306,7 +318,9 @@ namespace StarterAssets
                 _speed = targetSpeed;
             }
 
-            _animationBlend = Mathf.Lerp(_animationBlend, targetSpeed, Time.deltaTime * SpeedChangeRate);
+            _animationBlend = isPickingUp
+                ? 0.0f
+                : Mathf.Lerp(_animationBlend, targetSpeed, Time.deltaTime * SpeedChangeRate);
             if (_animationBlend < 0.01f) _animationBlend = 0f;
 
             // normalise input direction
@@ -314,7 +328,7 @@ namespace StarterAssets
 
             // note: Vector2's != operator uses approximation so is not floating point error prone, and is cheaper than magnitude
             // if there is a move input rotate player when the player is moving
-            if (_input.move != Vector2.zero)
+            if (_input.move != Vector2.zero && !isPickingUp)
             {
                 _targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg +
                                   _mainCamera.transform.eulerAngles.y;

@@ -2,16 +2,19 @@
 using UnityEngine;
 using TMPro;
 using System.Collections;
+using StarterAssets;
 
 interface IInteractable
 {
     public void Interact(string tag);
     public string getInteractText();
+    public string getInteractAnimationTrigger();
 
-    public string getAnimationTrigger();
+    //Extraer el trigger para la animación que se debe realizar al presionar click derecho luego de interactuar con el objeto
+    //public string getLCAnimationTrigger();
 }
 
-public class Interactor : MonoBehaviour
+public class Interactor : MonoBehaviour, IPickupState
 {
     public TMP_Text InteractionPrompt;
     private Animator anim;
@@ -19,12 +22,18 @@ public class Interactor : MonoBehaviour
     private IInteractable currentInteractable;
     private string currentInteractableTag;
 
-    private string animTrigger;
+    private string animInteractTrigger;
+
+    private bool _isPickingUp;
+
+    public bool IsPickingUp => _isPickingUp;
+
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         anim = GetComponent<Animator>();
+        _isPickingUp = false;
         SetPromptVisible(false);
     }
 
@@ -33,7 +42,11 @@ public class Interactor : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.E) && currentInteractable != null && !isPickingUp)
         {
-            anim.SetTrigger(animTrigger);
+            if (animInteractTrigger == "Pickup")
+            {
+               _isPickingUp = true; 
+            }
+            anim.SetTrigger(animInteractTrigger);
             StartCoroutine(CompletePickup(currentInteractable, currentInteractableTag));
             currentInteractable = null;
         }
@@ -47,7 +60,7 @@ public class Interactor : MonoBehaviour
             currentInteractable = interactable;
             currentInteractableTag = other.tag;
 
-            animTrigger = interactable.getAnimationTrigger();
+            animInteractTrigger = interactable.getInteractAnimationTrigger();
 
             SetPromptVisible(true);
             if (InteractionPrompt != null)
@@ -80,13 +93,14 @@ public class Interactor : MonoBehaviour
 
     private IEnumerator CompletePickup(IInteractable interactObj, string hitTag)
     {
-        isPickingUp = true;
+        //isPickingUp = true;
         SetPromptVisible(false);
 
         yield return new WaitForSeconds(0.5f);
 
         interactObj.Interact(hitTag);
         anim.SetInteger("Melee_w", 1);
-        isPickingUp = false;
+        yield return new WaitForSeconds(0.7f);
+        _isPickingUp = false;
     }
 }

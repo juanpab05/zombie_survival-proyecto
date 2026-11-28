@@ -11,7 +11,8 @@ public class OpenDoor : MonoBehaviour, IInteractable
     private Quaternion _openRotation;
     private Coroutine _currentCoroutine;
     public string interactMessage = "Press E to interact with door";
-    public string animTrigger = "Attack";
+    public string animInteractTrigger = "Attack";
+
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -41,9 +42,9 @@ public class OpenDoor : MonoBehaviour, IInteractable
         return interactMessage;
     }
 
-    public string getAnimationTrigger()
+    public string getInteractAnimationTrigger()
     {
-        return animTrigger;
+        return animInteractTrigger;
     }
 
 
